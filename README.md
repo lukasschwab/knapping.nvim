@@ -5,10 +5,8 @@ Extra Markdown highlighting for Neovim, loosely based on the checkbox styling an
 Current scope:
 
 - colors the whole checkbox token, including brackets, with a Things-inspired palette
-- supports alternate task markers such as `[/]`, `[-]`, `[!]`, `[?]`, `[P]`, `[M]`, and more
 - conceals checkbox tokens to symbols when a Nerd Font is available
 - highlights Obsidian-style callout headers and colors the `>` delimiters for the whole callout block
-- supports the GitHub alert subset because GitHub uses the same `[!TYPE]` blockquote syntax
 
 ## Supported checkboxes
 
@@ -90,27 +88,12 @@ Knapping supports nested callouts in source buffers by tracking callouts by quot
 
 ### `lazy.nvim`
 
-If you are developing this plugin locally, point `lazy.nvim` at the directory directly:
-
-```lua
-{
-  dir = "~/Programming/knapping.nvim",
-  name = "knapping.nvim",
-  ft = "markdown",
-  opts = {
-    use_nerd_font = vim.g.have_nerd_font,
-  },
-}
-```
-
-Once the repository is published, the same setup becomes:
-
 ```lua
 {
   "YOUR_GITHUB_USER/knapping.nvim",
   ft = "markdown",
   opts = {
-    use_nerd_font = vim.g.have_nerd_font,
+    use_nerd_font = true,   -- or false!
   },
 }
 ```
@@ -120,7 +103,7 @@ Once the repository is published, the same setup becomes:
 ```lua
 vim.opt.rtp:append("~/Programming/knapping.nvim")
 require("knapping").setup({
-  use_nerd_font = vim.g.have_nerd_font,
+  use_nerd_font = true,     -- or false!
 })
 ```
 
