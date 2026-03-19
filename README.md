@@ -8,6 +8,8 @@ Current scope:
 - conceals checkbox tokens to symbols when a Nerd Font is available
 - highlights Obsidian-style callout headers and colors the `>` delimiters for the whole callout block
 
+<img width="1020" height="1401" alt="Screenshot of nvim showing ./test.md wiht knapping.nvim enabled" src="https://github.com/user-attachments/assets/003be499-f8df-44aa-9089-4244e68c03d0" />
+
 ## Supported checkboxes
 
 ```markdown
