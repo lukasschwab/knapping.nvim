@@ -1,12 +1,14 @@
 # knapping.nvim
 
-Extra Markdown checkbox highlighting for Neovim, loosely based on the checkbox styling from the [Obsidian Things theme](https://github.com/colineckert/obsidian-things?tab=readme-ov-file#checkbox-styling).
+Extra Markdown highlighting for Neovim, loosely based on the checkbox styling and palette from the [Obsidian Things theme](https://github.com/colineckert/obsidian-things?tab=readme-ov-file#checkbox-styling).
 
 Current scope:
 
 - colors the whole checkbox token, including brackets, with a Things-inspired palette
 - supports alternate task markers such as `[/]`, `[-]`, `[!]`, `[?]`, `[P]`, `[M]`, and more
 - conceals checkbox tokens to symbols when a Nerd Font is available
+- highlights Obsidian-style callout headers and colors the `>` delimiters for the whole callout block
+- supports the GitHub alert subset because GitHub uses the same `[!TYPE]` blockquote syntax
 
 ## Supported checkboxes
 
@@ -37,6 +39,52 @@ Current scope:
 - [P] open pull request
 - [M] merged pull request
 ```
+
+Nested checkboxes are supported in indented lists and inside blockquotes because knapping matches the checkbox token after stripping Markdown list and blockquote prefixes.
+
+## Supported callouts
+
+Knapping highlights Obsidian callouts written as blockquotes with a `[!TYPE]` header:
+
+```markdown
+> [!NOTE]
+> A basic callout.
+
+> [!TIP] Custom title
+> A callout with a custom title.
+
+> [!WARNING]
+> Outer callout
+> > [!QUESTION]
+> > Nested callout
+```
+
+Supported aliases include:
+
+- `note`
+- `abstract`, `summary`, `tldr`
+- `info`
+- `todo`
+- `tip`, `hint`
+- `important`
+- `success`, `check`, `done`
+- `question`, `help`, `faq`
+- `warning`, `caution`, `attention`
+- `failure`, `fail`, `missing`
+- `danger`, `error`
+- `bug`
+- `example`
+- `quote`, `cite`
+
+GitHub alerts are supported as a documented subset:
+
+- `NOTE`
+- `TIP`
+- `IMPORTANT`
+- `WARNING`
+- `CAUTION`
+
+Knapping supports nested callouts in source buffers by tracking callouts by quote depth and coloring each active `>` delimiter separately.
 
 ## Installation
 

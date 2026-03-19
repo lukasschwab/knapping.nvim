@@ -90,6 +90,36 @@ local checkbox_styles = {
   ["M"] = { name = "merged_pr", tone = "purple", symbol = "merged_pr" },
 }
 
+local callout_styles = {
+  note = { name = "note", tone = "blue" },
+  abstract = { name = "abstract", tone = "cyan" },
+  summary = { name = "abstract", tone = "cyan" },
+  tldr = { name = "abstract", tone = "cyan" },
+  info = { name = "info", tone = "blue" },
+  todo = { name = "todo", tone = "accent" },
+  tip = { name = "tip", tone = "green" },
+  hint = { name = "tip", tone = "green" },
+  important = { name = "important", tone = "purple" },
+  success = { name = "success", tone = "green" },
+  check = { name = "success", tone = "green" },
+  done = { name = "success", tone = "green" },
+  question = { name = "question", tone = "yellow" },
+  help = { name = "question", tone = "yellow" },
+  faq = { name = "question", tone = "yellow" },
+  warning = { name = "warning", tone = "orange" },
+  caution = { name = "warning", tone = "orange" },
+  attention = { name = "warning", tone = "orange" },
+  failure = { name = "failure", tone = "red" },
+  fail = { name = "failure", tone = "red" },
+  missing = { name = "failure", tone = "red" },
+  danger = { name = "danger", tone = "red" },
+  error = { name = "danger", tone = "red" },
+  bug = { name = "bug", tone = "red" },
+  example = { name = "example", tone = "purple" },
+  quote = { name = "quote", tone = "cyan" },
+  cite = { name = "quote", tone = "cyan" },
+}
+
 local state = {
   config = vim.deepcopy(defaults),
   attached = {},
@@ -148,6 +178,18 @@ local function define_highlights()
       vim.api.nvim_set_hl(0, "KnappingCheckbox" .. style.name, {
         fg = tones[style.tone],
         nocombine = true,
+      })
+    end
+  end
+
+  seen = {}
+  for _, style in pairs(callout_styles) do
+    if not seen[style.name] then
+      seen[style.name] = true
+      vim.api.nvim_set_hl(0, "KnappingCallout" .. style.name, {
+        fg = tones[style.tone],
+        nocombine = true,
+        bold = true,
       })
     end
   end
@@ -244,6 +286,64 @@ local function is_task_prefix(prefix)
   return false
 end
 
+local function parse_blockquote(line)
+  local columns = {}
+  local index = 1
+  local length = #line
+
+  while index <= length and line:sub(index, index):match("[%s]") do
+    index = index + 1
+  end
+
+  while index <= length and line:sub(index, index) == ">" do
+    columns[#columns + 1] = index - 1
+    index = index + 1
+
+    if index <= length and line:sub(index, index) == " " then
+      index = index + 1
+    end
+
+    while index <= length and line:sub(index, index):match("[\t]") do
+      index = index + 1
+    end
+  end
+
+  return {
+    depth = #columns,
+    columns = columns,
+    content = line:sub(index),
+    content_col = index - 1,
+  }
+end
+
+local function parse_callout_header(content)
+  local leading, kind, foldable, trailing = content:match("^(%s*)%[!([^%]]+)%]([+-]?)(.*)$")
+  if not kind then
+    return nil
+  end
+
+  local callout = callout_styles[kind:lower()] or callout_styles.note
+  local marker_start = #leading
+  local marker_end = marker_start + #kind + #foldable + 3
+
+  return {
+    callout = callout,
+    kind = kind:lower(),
+    marker_start = marker_start,
+    marker_end = marker_end,
+    has_title = trailing:match("%S") ~= nil,
+  }
+end
+
+local function add_highlight(bufnr, row, start_col, end_col, group)
+  vim.api.nvim_buf_set_extmark(bufnr, namespace, row, start_col, {
+    end_row = row,
+    end_col = end_col,
+    hl_group = group,
+    right_gravity = false,
+  })
+end
+
 local function find_checkbox(line)
   local from = 1
 
@@ -261,6 +361,50 @@ local function find_checkbox(line)
   end
 end
 
+local function apply_callouts(bufnr, lines)
+  local active_callouts = {}
+
+  for row, line in ipairs(lines) do
+    local quote = parse_blockquote(line)
+
+    for depth = quote.depth + 1, #active_callouts do
+      active_callouts[depth] = nil
+    end
+
+    local header = nil
+    if quote.depth > 0 then
+      header = parse_callout_header(quote.content)
+      if header then
+        active_callouts[quote.depth] = header.callout
+        for depth = quote.depth + 1, #active_callouts do
+          active_callouts[depth] = nil
+        end
+      end
+
+      for depth = 1, quote.depth do
+        local active = active_callouts[depth]
+        local column = quote.columns[depth]
+        if active and column then
+          add_highlight(bufnr, row - 1, column, column + 1, "KnappingCallout" .. active.name)
+        end
+      end
+
+      if header then
+        local start_col = quote.content_col + header.marker_start
+        add_highlight(
+          bufnr,
+          row - 1,
+          start_col,
+          #line,
+          "KnappingCallout" .. header.callout.name
+        )
+      end
+    else
+      active_callouts = {}
+    end
+  end
+end
+
 local function refresh_buffer(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then
     return
@@ -275,6 +419,8 @@ local function refresh_buffer(bufnr)
 
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local show_symbols = use_symbols()
+
+  apply_callouts(bufnr, lines)
 
   for row, line in ipairs(lines) do
     local start_col, end_col, marker = find_checkbox(line)
