@@ -199,42 +199,6 @@ local function use_symbols()
   return state.config.use_nerd_font
 end
 
-local function apply_window_settings(bufnr)
-  if not use_symbols() or not state.config.set_conceallevel then
-    return
-  end
-
-  for _, winid in ipairs(vim.fn.win_findbuf(bufnr)) do
-    local ok = pcall(vim.api.nvim_win_get_var, winid, "knapping_prev_conceallevel")
-    if not ok then
-      vim.api.nvim_win_set_var(winid, "knapping_prev_conceallevel", vim.wo[winid].conceallevel)
-    end
-
-    if vim.wo[winid].conceallevel < 2 then
-      vim.wo[winid].conceallevel = 2
-    end
-  end
-end
-
-local function restore_window_settings(bufnr)
-  for _, winid in ipairs(vim.fn.win_findbuf(bufnr)) do
-    local ok, previous = pcall(vim.api.nvim_win_get_var, winid, "knapping_prev_conceallevel")
-    if ok then
-      vim.wo[winid].conceallevel = previous
-      pcall(vim.api.nvim_win_del_var, winid, "knapping_prev_conceallevel")
-    end
-  end
-end
-
-local function restore_current_window_setting()
-  local winid = vim.api.nvim_get_current_win()
-  local ok, previous = pcall(vim.api.nvim_win_get_var, winid, "knapping_prev_conceallevel")
-  if ok then
-    vim.wo[winid].conceallevel = previous
-    pcall(vim.api.nvim_win_del_var, winid, "knapping_prev_conceallevel")
-  end
-end
-
 local function strip_quote_prefix(prefix)
   local rest = prefix
   while true do
@@ -320,6 +284,15 @@ local function add_highlight(bufnr, row, start_col, end_col, group)
   })
 end
 
+local function overlay_text(symbol, width)
+  local padding = width - vim.fn.strdisplaywidth(symbol)
+  if padding < 0 then
+    padding = 0
+  end
+
+  return symbol .. string.rep(" ", padding)
+end
+
 local function find_checkbox(line)
   local from = 1
 
@@ -390,7 +363,6 @@ local function refresh_buffer(bufnr)
     return
   end
 
-  apply_window_settings(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
 
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
@@ -410,7 +382,14 @@ local function refresh_buffer(bufnr)
       }
 
       if show_symbols then
-        extmark.conceal = state.config.symbols[style.symbol] or marker
+        extmark.virt_text = {
+          {
+            overlay_text(state.config.symbols[style.symbol] or marker, end_col - start_col + 1),
+            extmark.hl_group,
+          },
+        }
+        extmark.virt_text_pos = "overlay"
+        extmark.hl_mode = "replace"
       end
 
       vim.api.nvim_buf_set_extmark(bufnr, namespace, row - 1, start_col - 1, extmark)
@@ -438,20 +417,11 @@ local function attach_buffer(bufnr)
     end,
   })
 
-  vim.api.nvim_create_autocmd("BufWinLeave", {
-    group = buffer_group,
-    buffer = bufnr,
-    callback = function()
-      restore_current_window_setting()
-    end,
-  })
-
   vim.api.nvim_create_autocmd("BufWipeout", {
     group = buffer_group,
     buffer = bufnr,
     once = true,
     callback = function()
-      restore_window_settings(bufnr)
       state.attached[bufnr] = nil
       pcall(vim.api.nvim_del_augroup_by_id, buffer_group)
     end,
@@ -462,7 +432,6 @@ end
 
 local function detach_buffer(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
-  restore_window_settings(bufnr)
   state.attached[bufnr] = nil
   pcall(vim.api.nvim_del_augroup_by_name, "KnappingBuffer" .. bufnr)
 end
