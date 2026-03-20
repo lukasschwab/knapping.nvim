@@ -116,14 +116,14 @@ Default configuration:
 ```lua
 require("knapping").setup({
   filetypes = { "markdown" },
-  use_nerd_font = nil,
+  use_nerd_font = false,
   set_conceallevel = true,
 })
 ```
 
 Notes:
 
-- `use_nerd_font = nil` uses a best-effort check: `vim.g.have_nerd_font`, `vim.g.nerd_font`, `vim.g.have_nf`, or `guifont`.
+- `use_nerd_font = false` is the default; set it to `true` explicitly when you know your terminal or GUI font supports the glyphs you want
 - when Nerd Font symbols are enabled, knapping raises `conceallevel` to `2` in Markdown windows unless `set_conceallevel = false`
 - if conceal is disabled in a window, you still get the colored `[x]` token fallback
 - `palette` and `symbols` are fully overridable if you want different colors or glyphs

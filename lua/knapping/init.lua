@@ -5,7 +5,7 @@ local augroup = vim.api.nvim_create_augroup("Knapping", { clear = true })
 
 local defaults = {
   filetypes = { "markdown" },
-  use_nerd_font = nil,
+  use_nerd_font = false,
   set_conceallevel = true,
   palette = {
     light = {
@@ -195,32 +195,8 @@ local function define_highlights()
   end
 end
 
-local function has_nerd_font()
-  if state.config.use_nerd_font ~= nil then
-    return state.config.use_nerd_font
-  end
-
-  if vim.g.have_nerd_font ~= nil then
-    return vim.g.have_nerd_font
-  end
-
-  if vim.g.nerd_font ~= nil then
-    return vim.g.nerd_font
-  end
-
-  if vim.g.have_nf ~= nil then
-    return vim.g.have_nf
-  end
-
-  if vim.fn.has("gui_running") == 1 and vim.o.guifont ~= "" then
-    return vim.o.guifont:find("Nerd Font", 1, true) ~= nil
-  end
-
-  return false
-end
-
 local function use_symbols()
-  return has_nerd_font()
+  return state.config.use_nerd_font
 end
 
 local function apply_window_settings(bufnr)
