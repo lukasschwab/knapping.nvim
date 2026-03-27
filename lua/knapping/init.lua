@@ -124,6 +124,7 @@ local state = {
   config = vim.deepcopy(defaults),
   attached = {},
   configured = false,
+  cursor_rows = {},
 }
 
 local function merge_config(user_config)
@@ -197,6 +198,14 @@ end
 
 local function use_symbols()
   return state.config.use_nerd_font
+end
+
+local function get_cursor_row(bufnr)
+  local winid = vim.fn.bufwinid(bufnr)
+  if winid == -1 then
+    return nil
+  end
+  return vim.api.nvim_win_get_cursor(winid)[1] - 1
 end
 
 local function strip_quote_prefix(prefix)
@@ -354,6 +363,72 @@ local function apply_callouts(bufnr, lines)
   end
 end
 
+local function update_checkbox_overlay(bufnr, row, show_overlay)
+  local extmarks = vim.api.nvim_buf_get_extmarks(bufnr, namespace, { row, 0 }, { row, -1 }, { details = true })
+
+  for _, extmark in ipairs(extmarks) do
+    local id, _, col, details = extmark[1], extmark[2], extmark[3], extmark[4]
+    if details.hl_group and details.hl_group:match("^KnappingCheckbox") then
+      local line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1]
+      if not line then
+        return
+      end
+
+      local start_col, end_col, marker = find_checkbox(line)
+      if not start_col then
+        return
+      end
+
+      local style = checkbox_styles[marker]
+      local opts = {
+        id = id,
+        end_row = row,
+        end_col = end_col,
+        hl_group = "KnappingCheckbox" .. style.name,
+        right_gravity = false,
+      }
+
+      if show_overlay then
+        opts.virt_text = {
+          {
+            overlay_text(state.config.symbols[style.symbol] or marker, end_col - start_col + 1),
+            opts.hl_group,
+          },
+        }
+        opts.virt_text_pos = "overlay"
+        opts.hl_mode = "replace"
+      end
+
+      vim.api.nvim_buf_set_extmark(bufnr, namespace, row, col, opts)
+      return
+    end
+  end
+end
+
+local function on_cursor_moved(bufnr)
+  if not use_symbols() then
+    return
+  end
+
+  local cursor_row = get_cursor_row(bufnr)
+  if not cursor_row then
+    return
+  end
+
+  local prev_row = state.cursor_rows[bufnr]
+  if prev_row == cursor_row then
+    return
+  end
+
+  state.cursor_rows[bufnr] = cursor_row
+
+  if prev_row then
+    update_checkbox_overlay(bufnr, prev_row, true)
+  end
+
+  update_checkbox_overlay(bufnr, cursor_row, false)
+end
+
 local function refresh_buffer(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then
     return
@@ -367,6 +442,11 @@ local function refresh_buffer(bufnr)
 
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local show_symbols = use_symbols()
+  local cursor_row = show_symbols and get_cursor_row(bufnr) or nil
+
+  if cursor_row then
+    state.cursor_rows[bufnr] = cursor_row
+  end
 
   apply_callouts(bufnr, lines)
 
@@ -381,7 +461,7 @@ local function refresh_buffer(bufnr)
         right_gravity = false,
       }
 
-      if show_symbols then
+      if show_symbols and row - 1 ~= cursor_row then
         extmark.virt_text = {
           {
             overlay_text(state.config.symbols[style.symbol] or marker, end_col - start_col + 1),
@@ -417,12 +497,21 @@ local function attach_buffer(bufnr)
     end,
   })
 
+  vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+    group = buffer_group,
+    buffer = bufnr,
+    callback = function()
+      on_cursor_moved(bufnr)
+    end,
+  })
+
   vim.api.nvim_create_autocmd("BufWipeout", {
     group = buffer_group,
     buffer = bufnr,
     once = true,
     callback = function()
       state.attached[bufnr] = nil
+      state.cursor_rows[bufnr] = nil
       pcall(vim.api.nvim_del_augroup_by_id, buffer_group)
     end,
   })
@@ -433,6 +522,7 @@ end
 local function detach_buffer(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
   state.attached[bufnr] = nil
+  state.cursor_rows[bufnr] = nil
   pcall(vim.api.nvim_del_augroup_by_name, "KnappingBuffer" .. bufnr)
 end
 
