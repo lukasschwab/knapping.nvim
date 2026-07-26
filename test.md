@@ -67,3 +67,15 @@ $ ./scripts/test-markdown.sh
 
 > [!CAUTION]- Fold marker
 > Fold markers are part of the syntax and should be highlighted with the title.
+
+## Comments
+
+<!-- This comment should be muted, including its delimiters. -->
+
+<!--
+This multi-line comment should also be muted.
+-->
+
+```markdown
+<!-- This is code, not a muted comment. -->
+```

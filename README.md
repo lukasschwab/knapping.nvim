@@ -7,6 +7,7 @@ Current scope:
 - colors the whole checkbox token, including brackets, with a Things-inspired palette
 - conceals checkbox tokens to symbols when a Nerd Font is available
 - highlights Obsidian-style callout headers and colors the `>` delimiters for the whole callout block
+- mutes HTML-style Markdown comments outside fenced code blocks
 
 <img width="1020" height="1401" alt="Screenshot of nvim showing ./test.md wiht knapping.nvim enabled" src="https://github.com/user-attachments/assets/003be499-f8df-44aa-9089-4244e68c03d0" />
 

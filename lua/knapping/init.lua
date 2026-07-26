@@ -172,6 +172,11 @@ local function define_highlights()
   local tones = vim.deepcopy(palette)
   tones.accent = resolved_accent()
 
+  vim.api.nvim_set_hl(0, "KnappingComment", {
+    fg = tones.muted,
+    nocombine = true,
+  })
+
   local seen = {}
   for _, style in pairs(checkbox_styles) do
     if not seen[style.name] then
@@ -293,6 +298,16 @@ local function add_highlight(bufnr, row, start_col, end_col, group)
   })
 end
 
+local function add_comment_highlight(bufnr, row, start_col, end_col)
+  vim.api.nvim_buf_set_extmark(bufnr, namespace, row, start_col, {
+    end_row = row,
+    end_col = end_col,
+    hl_group = "KnappingComment",
+    priority = 200,
+    right_gravity = false,
+  })
+end
+
 local function overlay_text(symbol, width)
   local padding = width - vim.fn.strdisplaywidth(symbol)
   if padding < 0 then
@@ -316,6 +331,71 @@ local function find_checkbox(line)
     end
 
     from = end_col + 1
+  end
+end
+
+local function fence_marker(line)
+  local marker = line:match("^ ? ? ?(`+)")
+  if marker and #marker >= 3 then
+    return "`", #marker
+  end
+
+  marker = line:match("^ ? ? ?(~+)")
+  if marker and #marker >= 3 then
+    return "~", #marker
+  end
+
+  return nil
+end
+
+local function closes_fence(line, fence)
+  local marker = line:match("^ ? ? ?(" .. fence.character .. "+)%s*$")
+  return marker and #marker >= fence.length
+end
+
+local function apply_comments(bufnr, lines)
+  local comment_start = nil
+  local fence = nil
+
+  for row, line in ipairs(lines) do
+    if fence then
+      if closes_fence(line, fence) then
+        fence = nil
+      end
+    else
+      local character, length = nil, nil
+      if not comment_start then
+        character, length = fence_marker(line)
+      end
+      if character then
+        fence = { character = character, length = length }
+      else
+        local from = 1
+
+        while from <= #line do
+          if comment_start then
+            local close_start, close_end = line:find("-->", from, true)
+            if close_start then
+              add_comment_highlight(bufnr, row - 1, comment_start - 1, close_end)
+              comment_start = nil
+              from = close_end + 1
+            else
+              add_comment_highlight(bufnr, row - 1, comment_start - 1, #line)
+              comment_start = 1
+              break
+            end
+          else
+            local open_start, open_end = line:find("<!--", from, true)
+            if not open_start then
+              break
+            end
+
+            comment_start = open_start
+            from = open_end + 1
+          end
+        end
+      end
+    end
   end
 end
 
@@ -449,6 +529,7 @@ local function refresh_buffer(bufnr)
   end
 
   apply_callouts(bufnr, lines)
+  apply_comments(bufnr, lines)
 
   for row, line in ipairs(lines) do
     local start_col, end_col, marker = find_checkbox(line)
