@@ -27,6 +27,7 @@ if [ ! -f "$TARGET_FILE" ]; then
 - [S] savings
 - [I] idea
 - [p] pros
+- [O] pros
 - [c] cons
 - [f] fire
 - [k] key
