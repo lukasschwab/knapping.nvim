@@ -79,7 +79,7 @@ local checkbox_styles = {
   ["S"] = { name = "savings", tone = "green", symbol = "savings" },
   ["I"] = { name = "idea", tone = "yellow", symbol = "idea" },
   ["p"] = { name = "pros", tone = "green", symbol = "pros" },
-  ["O"] = { name = "pros", tone = "green", symbol = "pros" },
+  ["O"] = { name = "open_pr", tone = "green", symbol = "open_pr" },
   ["c"] = { name = "cons", tone = "orange", symbol = "cons" },
   ["f"] = { name = "fire", tone = "red", symbol = "fire" },
   ["k"] = { name = "key", tone = "yellow", symbol = "key" },

@@ -37,7 +37,7 @@ $ ./scripts/test-markdown.sh
 - [S] savings
 - [I] idea
 - [p] pros
-- [O] pros
+- [O] open pull request
 - [c] cons
 - [f] fire
 - [k] key
@@ -46,6 +46,7 @@ $ ./scripts/test-markdown.sh
 - [d] down
 - [D] draft pull request
 - [P] open pull request
+- [O] open pull request (alias)
 - [M] merged pull request
 
 ## Callouts

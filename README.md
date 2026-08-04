@@ -30,7 +30,7 @@ Current scope:
 - [S] savings
 - [I] idea
 - [p] pros
-- [O] pros
+- [O] open pull request
 - [c] cons
 - [f] fire
 - [k] key
