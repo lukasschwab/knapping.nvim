@@ -33,6 +33,7 @@ $ ./scripts/test-markdown.sh
 - ["] quote
 - [l] location
 - [b] bookmark
+- [B] blocked
 - [i] information
 - [S] savings
 - [I] idea

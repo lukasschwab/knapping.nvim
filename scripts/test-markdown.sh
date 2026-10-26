@@ -23,6 +23,7 @@ if [ ! -f "$TARGET_FILE" ]; then
 - ["] quote
 - [l] location
 - [b] bookmark
+- [B] blocked
 - [i] information
 - [S] savings
 - [I] idea

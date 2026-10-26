@@ -26,6 +26,7 @@ Current scope:
 - ["] quote
 - [l] location
 - [b] bookmark
+- [B] blocked
 - [i] information
 - [S] savings
 - [I] idea
@@ -43,6 +44,10 @@ Current scope:
 ```
 
 Nested checkboxes are supported in indented lists and inside blockquotes because knapping matches the checkbox token after stripping Markdown list and blockquote prefixes.
+
+`[B]` (blocked) uses a rusty-red color and a Nerd Font octagonal stop icon
+(`nf-oct-stop`). Override `palette.light.rust`, `palette.dark.rust`, or
+`symbols.blocked` to customize its appearance.
 
 ## Supported callouts
 
