@@ -130,7 +130,60 @@ local state = {
   attached = {},
   configured = false,
   cursor_rows = {},
+  wrapping = {},
 }
+
+local function configure_wrapping(bufnr)
+  -- Share the highlighting vocabulary, including the Unicode quote marker.
+  local markers = vim.tbl_keys(checkbox_styles)
+  table.sort(markers)
+  local checkbox = [[^\s*\%([-*+]\|\d\+[.)]\)\s\+\[]]
+    .. "[" .. vim.fn.escape(table.concat(markers), "\\^-]") .. "]"
+    .. [[\]\s\+]]
+
+  local saved = state.wrapping[bufnr] or {}
+  local function extend(option, prefix, separator)
+    local current = vim.bo[bufnr][option]
+    if saved[option] and current == saved[option].applied then
+      return
+    end
+    local applied = prefix .. (current ~= "" and separator .. current or "")
+    saved[option] = { original = current, applied = applied }
+    vim.bo[bufnr][option] = applied
+  end
+
+  -- Checkbox matches must take precedence over the shorter list marker.
+  extend("formatlistpat", checkbox, [[\|]])
+
+  -- Neovim strips comment leaders before matching formatlistpat. Extend
+  -- Markdown's first-line-only bullet leaders instead of removing them.
+  local leaders = {}
+  local comments = vim.bo[bufnr].comments
+  if saved.comments and comments == saved.comments.applied then
+    comments = saved.comments.original
+  end
+  for entry in comments:gmatch("[^,]+") do
+    local bullet = entry:match("^fb:([*+-])$")
+    if bullet then
+      for _, marker in ipairs(markers) do
+        leaders[#leaders + 1] = "fb:" .. bullet .. " [" .. marker .. "]"
+      end
+    end
+  end
+  if #leaders > 0 then
+    extend("comments", table.concat(leaders, ","), ",")
+  end
+  state.wrapping[bufnr] = saved
+end
+
+local function restore_wrapping(bufnr)
+  for option, saved in pairs(state.wrapping[bufnr] or {}) do
+    if vim.bo[bufnr][option] == saved.applied then
+      vim.bo[bufnr][option] = saved.original
+    end
+  end
+  state.wrapping[bufnr] = nil
+end
 
 local function merge_config(user_config)
   state.config = vim.tbl_deep_extend("force", vim.deepcopy(defaults), user_config or {})
@@ -564,11 +617,16 @@ local function refresh_buffer(bufnr)
 end
 
 local function attach_buffer(bufnr)
-  if not vim.api.nvim_buf_is_valid(bufnr) or state.attached[bufnr] then
+  if not vim.api.nvim_buf_is_valid(bufnr) then
     return
   end
 
   if not is_target_filetype(vim.bo[bufnr].filetype) then
+    return
+  end
+
+  configure_wrapping(bufnr)
+  if state.attached[bufnr] then
     return
   end
 
@@ -598,6 +656,7 @@ local function attach_buffer(bufnr)
     callback = function()
       state.attached[bufnr] = nil
       state.cursor_rows[bufnr] = nil
+      state.wrapping[bufnr] = nil
       pcall(vim.api.nvim_del_augroup_by_id, buffer_group)
     end,
   })
@@ -606,6 +665,7 @@ local function attach_buffer(bufnr)
 end
 
 local function detach_buffer(bufnr)
+  restore_wrapping(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
   state.attached[bufnr] = nil
   state.cursor_rows[bufnr] = nil
@@ -641,9 +701,13 @@ local function create_global_autocmds()
 
   vim.api.nvim_create_autocmd("FileType", {
     group = augroup,
-    pattern = state.config.filetypes,
+    pattern = "*",
     callback = function(event)
-      attach_buffer(event.buf)
+      if is_target_filetype(vim.bo[event.buf].filetype) then
+        attach_buffer(event.buf)
+      elseif state.attached[event.buf] then
+        detach_buffer(event.buf)
+      end
     end,
   })
 

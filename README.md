@@ -5,6 +5,7 @@ Extra Markdown highlighting for Neovim, loosely based on the checkbox styling an
 Current scope:
 
 - colors the whole checkbox token, including brackets, with a Things-inspired palette
+- aligns wrapped checkbox items with their text
 - conceals checkbox tokens to symbols when a Nerd Font is available
 - highlights Obsidian-style callout headers and colors the `>` delimiters for the whole callout block
 - mutes HTML-style Markdown comments outside fenced code blocks
@@ -44,6 +45,24 @@ Current scope:
 ```
 
 Nested checkboxes are supported in indented lists and inside blockquotes because knapping matches the checkbox token after stripping Markdown list and blockquote prefixes.
+
+### Line wrapping
+
+With Neovim's built-in Markdown formatting, checkbox items wrap beneath their
+text in Insert mode and when formatting with `gq`:
+
+```markdown
+- [ ] Here is my line-wrapped item
+      continuing to the next line.
+```
+
+This applies to all supported checkbox states, with standard bullet spacing
+(`- [ ]`, `* [ ]`, `+ [ ]`) and numbered items (`1. [ ]`, `1) [ ]`). Ordinary
+lists and custom list patterns retain their existing behavior. Knapping extends
+the buffer's `formatlistpat` and first-line comment leaders; disabling Knapping
+restores these options unless you have changed them since. Your `textwidth`,
+`autoindent`, and `formatoptions` settings still control when wrapping happens
+(list indentation uses `autoindent` and the `n` flag in `formatoptions`).
 
 `[B]` (blocked) uses a rusty-red color and a Nerd Font octagonal stop icon
 (`nf-oct-stop`). Override `palette.light.rust`, `palette.dark.rust`, or
