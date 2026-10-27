@@ -64,6 +64,10 @@ restores these options unless you have changed them since. Your `textwidth`,
 `autoindent`, and `formatoptions` settings still control when wrapping happens
 (list indentation uses `autoindent` and the `n` flag in `formatoptions`).
 
+If an `indentexpr` is configured (for example, Tree-sitter indentation), Knapping
+delegates to it while preserving the checkbox continuation indent already added
+by hard wrapping. Disabling Knapping restores the original expression too.
+
 `[B]` (blocked) uses a rusty-red color and a Nerd Font octagonal stop icon
 (`nf-oct-stop`). Override `palette.light.rust`, `palette.dark.rust`, or
 `symbols.blocked` to customize its appearance.

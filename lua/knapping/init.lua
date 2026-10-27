@@ -616,6 +616,60 @@ local function refresh_buffer(bufnr)
   end
 end
 
+local indent_expression = "v:lua.require'knapping'.indentexpr()"
+
+local function configure_indentexpr(bufnr)
+  local current = vim.bo[bufnr].indentexpr
+  if current == "" or current == indent_expression then
+    return
+  end
+  state.wrapping[bufnr].indentexpr = { original = current, applied = indent_expression }
+  vim.bo[bufnr].indentexpr = indent_expression
+end
+
+function M.indentexpr()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local saved = state.wrapping[bufnr] and state.wrapping[bufnr].indentexpr
+  if not saved then
+    return -1
+  end
+
+  local result = vim.fn.eval(saved.original)
+  local lnum = vim.v.lnum
+  local line = vim.fn.getline(lnum)
+  -- A new list item belongs to the original indenter, including nested lists.
+  local content = strip_quote_prefix(line)
+  if content:match("^%s*[-*+]%s+") or content:match("^%s*%d+[.)]%s+") then
+    return result
+  end
+
+  -- Hard wrapping has already added the list indent before indentexpr runs.
+  -- Preserve it only when it leads back to a supported checkbox item.
+  local minimum = vim.fn.indent(lnum)
+  for row = lnum - 1, 1, -1 do
+    local previous = vim.fn.getline(row)
+    if not previous:match("%S") then
+      break
+    end
+    local _, last = find_checkbox(previous)
+    if last then
+      local spacing = previous:sub(last + 1):match("^%s+")
+      if spacing then
+        local width = vim.fn.strdisplaywidth(previous:sub(1, last + #spacing))
+        if minimum >= width and result >= 0 and result < width then
+          return width
+        end
+      end
+      break
+    end
+    minimum = math.min(minimum, vim.fn.indent(row))
+    if minimum == 0 then
+      break
+    end
+  end
+  return result
+end
+
 local function attach_buffer(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then
     return
@@ -626,6 +680,14 @@ local function attach_buffer(bufnr)
   end
 
   configure_wrapping(bufnr)
+  configure_indentexpr(bufnr)
+  -- FileType handlers registered after ours may install an indenter too.
+  vim.schedule(function()
+    if vim.api.nvim_buf_is_valid(bufnr) and state.attached[bufnr] then
+      configure_wrapping(bufnr)
+      configure_indentexpr(bufnr)
+    end
+  end)
   if state.attached[bufnr] then
     return
   end
